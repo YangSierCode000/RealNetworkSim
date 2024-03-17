@@ -18,6 +18,7 @@ public:
     virtual ~WorkingApplication();
 
     void Setup(Ptr<Socket> socket, Address address, uint32_t packetSize, uint32_t nPackets, DataRate dataRate);
+    void StartSendingData(double initialDataValue);
 
 protected:
     virtual void StartApplication() override;
@@ -26,7 +27,6 @@ protected:
 private:
     void ScheduleTx();
     void SendPacket();
-    void ScheduleRetransmission();
 
     Ptr<Socket> m_socket;
     Address m_peer;

@@ -10,7 +10,7 @@ NS_LOG_COMPONENT_DEFINE("WorkingApplication");
 TypeId WorkingApplication::GetTypeId() {
     static TypeId tid = TypeId("WorkingApplication")
         .SetParent<Application>()
-        .SetGroupName("Tutorial")
+        .SetGroupName("MyApp")
         .AddConstructor<WorkingApplication>();
     return tid;
 }
@@ -57,32 +57,31 @@ void WorkingApplication::StartApplication() {
     }
 
     m_socket->SetRecvCallback(MakeCallback(&WorkingApplication::HandleRead, this));
-
-    // Send initial data and schedule retransmissions
-    m_nextDataToSend = 9.0;
-    SendPacket();
-    ScheduleRetransmission();
 }
+
+void WorkingApplication::StartSendingData(double initialDataValue) {
+    m_nextDataToSend = initialDataValue; // Set the initial data to send
+    SendPacket();  // Trigger the first packet transmission
+}
+
 
 void WorkingApplication::SendPacket() {
-    if (!m_responseReceived) {
-        NS_LOG_UNCOND("Sending data: " << m_nextDataToSend);
-        Ptr<Packet> packet = Create<Packet>(reinterpret_cast<uint8_t*>(&m_nextDataToSend), sizeof(m_nextDataToSend));
-        m_socket->Send(packet);
-        m_packetsSent++;
+    NS_LOG_UNCOND("Sending data: " << m_nextDataToSend);
+    Ptr<Packet> packet = Create<Packet>(m_packetSize);
+    m_socket->Send(packet);
+
+    if (++m_packetsSent < m_nPackets)
+    {
+        ScheduleTx();
     }
 }
 
-void WorkingApplication::ScheduleRetransmission() {
-    if (!m_responseReceived) {
-        // Schedule the SendPacket method to be called after a delay
-        Time tNext(Seconds(0.1));  // Retransmission interval of 1 second
-        Simulator::Schedule(tNext, &WorkingApplication::SendPacket, this);
-    }
-}
 
-void WorkingApplication::ScheduleTx() {
-    if (m_running) {
+void
+WorkingApplication::ScheduleTx()
+{
+    if (m_running)
+    {
         Time tNext(Seconds(m_packetSize * 8 / static_cast<double>(m_dataRate.GetBitRate())));
         m_sendEvent = Simulator::Schedule(tNext, &WorkingApplication::SendPacket, this);
     }
@@ -92,6 +91,7 @@ void WorkingApplication::ScheduleTx() {
 void WorkingApplication::HandleRead(Ptr<Socket> socket) {
     Ptr<Packet> packet;
     Address from;
+    NS_LOG_UNCOND("Ip from " << InetSocketAddress::ConvertFrom(from).GetIpv4());
     while ((packet = socket->RecvFrom(from))) {
         if (packet->GetSize() == 0) {
             break;
